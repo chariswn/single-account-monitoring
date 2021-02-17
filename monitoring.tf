@@ -50,13 +50,22 @@ resource "aws_cloudwatch_log_group" "log_group" {
   }
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "subscription_filter" {
+resource "aws_cloudwatch_log_subscription_filter" "filter_by_username" {
   depends_on = [
     aws_lambda_permission.lambda_permission]
-  name = "subscription-filter"
+  name = "filter_by_username"
   log_group_name = aws_cloudwatch_log_group.log_group.name
-  filter_pattern = "userIdentity"
+  filter_pattern = "{$.userIdentity.sessionContext.sessionIssuer.userName = * }"
   destination_arn = aws_lambda_function.track_users.arn
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "filter_by_delete" {
+  depends_on = [
+    aws_lambda_permission.lambda_permission]
+  name = "filter_by_delete"
+  log_group_name = aws_cloudwatch_log_group.log_group.name
+  filter_pattern = "{ $.eventName = Create* || $.eventName = Update* || $.eventName = Delete* }"
+  destination_arn = aws_lambda_function.track_delete.arn
 }
 
 resource "aws_iam_role" "trust_relationship" {

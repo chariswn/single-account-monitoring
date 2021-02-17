@@ -63,10 +63,28 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 }
 
 resource "aws_lambda_function" "track_users" {
-  filename = "/Users/chariswn/Sandbox/poc/change-monitoring/single-account/lambda/helloWorld.zip"
-  function_name = "helloWorld"
+  filename = "/Users/chariswn/Sandbox/poc/change-monitoring/single-account/lambda/filterByUsername.zip"
+  function_name = "filterByUsername"
   role = aws_iam_role.role_lambda.arn
-  handler = "helloWorld.handler"
+  handler = "filterByUsername.handler"
+  runtime = "nodejs14.x"
+
+  vpc_config {
+    security_group_ids = [
+      aws_security_group.security_group_lambda.id]
+    subnet_ids = [
+      aws_subnet.subnet_1.id]
+  }
+  tags = {
+    Environment = var.env
+  }
+}
+
+resource "aws_lambda_function" "track_delete" {
+  filename = "/Users/chariswn/Sandbox/poc/change-monitoring/single-account/lambda/filterByDelete.zip"
+  function_name = "filterByDelete"
+  role = aws_iam_role.role_lambda.arn
+  handler = "filterByDelete.handler"
   runtime = "nodejs14.x"
 
   vpc_config {
@@ -87,6 +105,17 @@ resource "aws_lambda_permission" "lambda_permission" {
   statement_id = "AllowExecutionFromCloudWatch"
   action = "lambda:InvokeFunction"
   function_name = aws_lambda_function.track_users.function_name
+  principal = "logs.ap-southeast-1.amazonaws.com"
+  source_arn = "${aws_cloudwatch_log_group.log_group.arn}:*"
+}
+
+resource "aws_lambda_permission" "lambda_permission_2" {
+  depends_on = [
+    aws_lambda_function.track_users
+  ]
+  statement_id = "AllowExecutionFromCloudWatch"
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.track_delete.function_name
   principal = "logs.ap-southeast-1.amazonaws.com"
   source_arn = "${aws_cloudwatch_log_group.log_group.arn}:*"
 }
